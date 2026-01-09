@@ -1,0 +1,32 @@
+#!/usr/bin/env zsh
+
+SESSION="beek"
+
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  exec tmux attach -t "$SESSION"
+fi
+
+# Create session and 4-pane layout
+tmux new-session -d -s "$SESSION" -n main
+tmux split-window -h  -t "$SESSION":0
+tmux split-window -v  -t "$SESSION":0.0
+tmux split-window -v  -t "$SESSION":0.1
+tmux select-layout    -t "$SESSION":0 tiled
+
+# Get pane IDs in left-to-right, top-to-bottom order
+P1=$(tmux list-panes -t "$SESSION":0 -F '#{pane_index} #{pane_id}' | awk '$1==0 {print $2}')
+P2=$(tmux list-panes -t "$SESSION":0 -F '#{pane_index} #{pane_id}' | awk '$1==1 {print $2}')
+P3=$(tmux list-panes -t "$SESSION":0 -F '#{pane_index} #{pane_id}' | awk '$1==2 {print $2}')
+P4=$(tmux list-panes -t "$SESSION":0 -F '#{pane_index} #{pane_id}' | awk '$1==3 {print $2}')
+
+# Top-left (P1) = mactop shell, no ssh
+# Top-right (P2) = VPS
+# Bottom-left (P3) = beekserve
+# Bottom-right (P4) = wireguard
+
+tmux send-keys -t "$P2" 'ssh root@vps'        C-m
+tmux send-keys -t "$P3" 'ssh beek@beekserve'  C-m
+tmux send-keys -t "$P4" 'ssh root@wireguard'  C-m
+
+exec tmux attach -t "$SESSION"
+

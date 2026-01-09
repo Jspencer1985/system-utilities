@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WireGuard VPN Dashboard</title>
+    <style>
+        body { font-family: Arial; background: #1e1e1e; color: #fff; margin: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .card { background: #2d2d2d; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        .metric { display: inline-block; margin: 10px 20px; }
+        .metric-value { font-size: 2em; color: #4CAF50; }
+        .metric-label { color: #888; font-size: 0.9em; }
+        pre { background: #1a1a1a; padding: 15px; border-radius: 5px; overflow-x: auto; 
+              white-space: pre-wrap; font-size: 12px; }
+        h1 { color: #4CAF50; }
+        h2 { color: #2196F3; margin-top: 0; }
+        #status { float: right; padding: 5px 15px; border-radius: 15px; background: #4CAF50; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 WireGuard VPN Dashboard <span id="status">ONLINE</span></h1>
+        <div id="timestamp" style="color: #888;">Loading...</div>
+        
+        <div class="card">
+            <h2>📊 System Resources</h2>
+            <div class="metric">
+                <div class="metric-value" id="cpu">--%</div>
+                <div class="metric-label">CPU Usage</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="memory">--%</div>
+                <div class="metric-label">Memory Usage</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="disk">--%</div>
+                <div class="metric-label">Disk Usage</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔐 WireGuard Tunnel</h2>
+            <pre id="wg-stats">Loading...</pre>
+        </div>
+
+        <div class="card">
+            <h2>🛡️ Packet Filter (pf)</h2>
+            <pre id="pf-stats">Loading...</pre>
+        </div>
+    </div>
+
+    <script>
+        function updateStats() {
+            fetch('/api/stats')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received data:', data); // Debug output
+                    
+                    // Update system metrics
+                    if (data.system && data.system.cpu_percent !== undefined) {
+                        document.getElementById('cpu').textContent = 
+                            data.system.cpu_percent.toFixed(1) + '%';
+                    }
+                    
+                    if (data.system && data.system.memory && data.system.memory.percent !== undefined) {
+                        document.getElementById('memory').textContent = 
+                            data.system.memory.percent.toFixed(1) + '%';
+                    }
+                    
+                    if (data.system && data.system.disk && data.system.disk.percent !== undefined) {
+                        document.getElementById('disk').textContent = 
+                            data.system.disk.percent.toFixed(1) + '%';
+                    }
+                    
+                    // Update WireGuard stats
+                    if (data.wg) {
+                        document.getElementById('wg-stats').textContent = data.wg;
+                    }
+                    
+                    // Update PF stats
+                    if (data.pf) {
+                        document.getElementById('pf-stats').textContent = data.pf;
+                    }
+                    
+                    // Update timestamp
+                    if (data.system && data.system.timestamp) {
+                        document.getElementById('timestamp').textContent = 
+                            'Last updated: ' + data.system.timestamp;
+                    }
+                    
+                    // Update status
+                    document.getElementById('status').textContent = 'ONLINE';
+                    document.getElementById('status').style.background = '#4CAF50';
+                })
+                .catch(error => {
+                    console.error('Error fetching stats:', error);
+                    document.getElementById('status').textContent = 'ERROR';
+                    document.getElementById('status').style.background = '#f44336';
+                    document.getElementById('timestamp').textContent = 
+                        'Error: ' + error.message;
+                });
+        }
+
+        // Update every 2 seconds
+        updateStats();
+        setInterval(updateStats, 2000);
+    </script>
+</body>
+</html>
+
